@@ -32,7 +32,7 @@ jobs:
         env:
           CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-linux-gnu-gcc
         run: |
-          cargo build --target riscv64gc-unknown-linux-gnu --release --bin rg
+          cargo build --target riscv64gc-unknown-linux-gnu -F pcre2 --release --bin rg
           mkdir -p out
           mv target/riscv64gc-unknown-linux-gnu/release/rg out/rg
       - name: Strip ripgrep
