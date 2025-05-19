@@ -10,8 +10,19 @@ permissions:
   contents: write
 
 jobs:
-  upload-assets:
+  get-id:
     runs-on: ubuntu-latest
+    outputs:
+      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
+    steps:
+      - id: get-user
+        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
+  upload-assets:
+    needs: get-id
+    runs-on: ubuntu-latest
+    container:
+      image: messense/manylinux_2_31-cross:riscv64
+      options: --user ${{ needs.get-id.outputs.uid_gid }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,20 +39,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv64gc-unknown-linux-gnu
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y {binutils,gcc}-riscv64-linux-gnu
       - name: Build ripgrep
         env:
-          CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-linux-gnu-gcc
+          CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-unknown-linux-gnu-gcc
         run: |
           cargo build --target riscv64gc-unknown-linux-gnu -F pcre2 --release --bin rg
           mkdir -p out
           mv target/riscv64gc-unknown-linux-gnu/release/rg out/rg
       - name: Strip ripgrep
         run: |
-          riscv64-linux-gnu-strip out/rg
+          riscv64-unknown-linux-gnu-strip out/rg
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
